@@ -58,13 +58,45 @@ def openParametersFile(fname):
             params = [item.split(':') for item in lines]
             if (FLAG_DEBUG_PRINT):
                 [print(item[0],'\t',item[1]) for item in params]
+        return params
     except FileNotFoundError:
         print('%s file is not found!'%fname)
+        sys.exit()
+        # raise FileNotFoundError
     except ParamsError:
         print("Not enought parameters in %s!"%fname)
-    return params
+        sys.exit()
+    except Exception as err:
+        print('WOW, UNKNOWN ERROR: %s'%(err))
+        sys.exit()
+
+# creates a file HDF5 and saturate it with attributes
+def OpenHDF5(fname,params):
+    FLAG_OPENED_HDF5 = True
+    try:
+        f = h5py.File(fname, mode='w-')
+        return f
+    except FileExistsError:
+        print('Attempt to re-write file!')
+        sys.exit()
+    else:
+        err = Exception
+        print("Unexpected %s"%(err))
+        sys.exit()
 
 
+# calculate x-sec for exact P, T, VMS of exact molecule
+def CalculateXsec():
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    return
 
 
 
@@ -75,6 +107,9 @@ def openParametersFile(fname):
 
 # flag to print values in functions to debug
 FLAG_DEBUG_PRINT = True
+# flag to open\close HDF5 file 
+FLAG_OPENED_HDF5 = False
+
 
 if not os.path.exists("./images"):
     os.mkdir("./images")
@@ -89,9 +124,10 @@ if not os.path.exists("./datafiles"):
 print("Timer started")
 t_begin = time.time()
 
-XMASSSEC_VERSION = '0.1.1'; __version__ = XMASSSEC_VERSION
+XMASSSEC_VERSION = '0.2'; __version__ = XMASSSEC_VERSION
 XMASSSEC_HISTORY = [
-'INITIATION OF INPUT FILE WITH PARAMETERS 31.01.23 (ver. 0.1)'
+'INITIATION OF INPUT FILE WITH PARAMETERS 31.01.23 (ver. 0.1)',
+'CREATION OF HDF5 FILE + SOME EXCEPTIONS HANDLING (ver. 0.2)'
 ]
 
 # version header
@@ -99,27 +135,64 @@ print('X-MASS-SEC version: %s'%(XMASSSEC_VERSION))
 
 INPUT_FILENAME = 'params.inp'
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ParametersCalculation = openParametersFile(INPUT_FILENAME)
+
+db_begin('05_hit20')
+
+print(tableList())
+
+HDF5FileName = 'CO_HDF5'
+
+OpenHDF5(HDF5FileName, ParametersCalculation)
+
+
+
+
+CalculateXsec()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
