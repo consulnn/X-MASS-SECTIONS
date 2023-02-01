@@ -1,3 +1,6 @@
+if __name__ == "__main__":
+    print('XMASSSECTION: program to calculate and store cross-sections in HDF5 files.')
+
 import math
 import os
 import sys
@@ -26,6 +29,67 @@ plt.rcParams.update({
     "font.family": "serif",
     "font.serif": ["Palatino"],
 })
+
+XMASSSEC_VERSION = '0.0.1'; __version__ = XMASSSEC_VERSION
+XMASSSEC_HISTORY = [
+'INITIATION OF INPUT FILE WITH PARAMETERS 31.01.23 (ver. 0.1)'
+]
+
+# version header
+print('X-MASS-SEC version: %s'%(XMASSSEC_VERSION))
+
+INPUT_FILENAME = 'params.inp'
+
+# opens file with necessary parameters for calculations
+def openParametersFile(fname):
+    class ParamsError(Exception):
+        pass
+    try:
+        with open(fname,'r') as finp:
+            # input as list of lines in 'lines'
+            lines = finp.readlines()
+            # check if input has enough parameters
+            if (len(lines)<6):
+                raise ParamsError
+            # removing '\n'
+            lines = [item.rstrip('\n') for item in lines]
+            # splitting names and values
+            params = [item.split(':') for item in lines]
+            print(params)
+    except FileNotFoundError:
+        print('%s file is not found!'%fname)
+    except ParamsError:
+        print("Not enought parameters in %s!"%fname)
+    return
+
+
+openParametersFile(INPUT_FILENAME)
+
+
+
+#############################################################
+# TO DO #####################################################
+#############################################################
+# FULL NUMBER OF PARAMS #####################################
+#############################################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 if not os.path.exists("./images"):
     os.mkdir("./images")
