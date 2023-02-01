@@ -4,3 +4,14 @@ gas_name:CO
 wn_begin:0.0
 wn_end:15000.0
 comment:TEST CASE
+Gas_Q_abs_Absorbtion:CO
+addl_ident:
+gas_name:CO
+comment:TEST CASE
+Gas_index:05
+Pressure:10
+Temperature:10
+Broadener_Q_brd_VMR:10
+broadener_name:H2O
+Broadener_Index:01
+Wavenumber:15000
