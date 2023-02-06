@@ -5,8 +5,8 @@
 The background color should be `rgb(9, 105, 218)` for light mode and `rgb(119, 105, 218)` for dark mode.
 The background color should be `#ffffff` for light mode and `#0d1117` for dark mode.
 
-> SOME INPUT SPECIFICATION
-
+- [ ] SOME INPUT SPECIFICATION
+- [ ] \(Optional) Optimization of program  
 
 
 
