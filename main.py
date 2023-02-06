@@ -47,6 +47,7 @@ def openParametersFile(fname):
         pass
     try:
         with open(fname,'r') as finp:
+            global FLAG_DEBUG_PRINT
             # input as list of lines in 'lines'
             lines = finp.readlines()
             # check if input has enough parameters
@@ -58,6 +59,7 @@ def openParametersFile(fname):
             params = [item.split(':') for item in lines]
             if (FLAG_DEBUG_PRINT):
                 [print(item[0],'\t',item[1]) for item in params]
+        print('*********\nParameters file %s is opened well\n*********'%(fname))
         return params
     except FileNotFoundError:
         print('%s file is not found!'%fname)
@@ -72,9 +74,13 @@ def openParametersFile(fname):
 
 # creates a file HDF5 and saturate it with attributes
 def OpenHDF5(fname,params):
-    FLAG_OPENED_HDF5 = True
+    global FLAG_DEBUG_PRINT
     try:
-        f = h5py.File(fname, mode='w-')
+        f = h5py.File(fname, mode='w')
+        global FLAG_OPENED_HDF5 
+        FLAG_OPENED_HDF5 = True
+        
+        print('*********\nHDF5 file %s is opened well\n*********'%(fname))
         return f
     except FileExistsError:
         print('Attempt to re-write file!')
@@ -84,6 +90,23 @@ def OpenHDF5(fname,params):
         print("Unexpected %s"%(err))
         sys.exit()
 
+# closes the HDF5 file 
+def CloseHDF5(ftype):
+    try:
+        global FLAG_OPENED_HDF5 
+        if ((FLAG_OPENED_HDF5 != True) or (ftype.__repr__()=='<Closed HDF5 file>')):
+            raise FileNotFoundError
+        else:
+            ftype.close()
+            FLAG_OPENED_HDF5 = False
+            return
+    except FileNotFoundError:
+        print('File to close is not found or already closed')
+        sys.exit()
+    else:
+        err = Exception
+        print("Unexpected %s"%(err))
+        sys.exit()
 
 # calculate x-sec for exact P, T, VMS of exact molecule
 def CalculateXsec():
@@ -106,7 +129,7 @@ def CalculateXsec():
 
 
 # flag to print values in functions to debug
-FLAG_DEBUG_PRINT = True
+FLAG_DEBUG_PRINT = False
 # flag to open\close HDF5 file 
 FLAG_OPENED_HDF5 = False
 
@@ -124,10 +147,11 @@ if not os.path.exists("./datafiles"):
 print("Timer started")
 t_begin = time.time()
 
-XMASSSEC_VERSION = '0.2'; __version__ = XMASSSEC_VERSION
+XMASSSEC_VERSION = '0.2.1'; __version__ = XMASSSEC_VERSION
 XMASSSEC_HISTORY = [
 'INITIATION OF INPUT FILE WITH PARAMETERS 31.01.23 (ver. 0.1)',
-'CREATION OF HDF5 FILE + SOME EXCEPTIONS HANDLING (ver. 0.2)'
+'CREATION OF HDF5 FILE + SOME EXCEPTIONS HANDLING (ver. 0.2)',
+'CLOSING HDF5 FILE AND SATURATION OF ATTRIBUTES (ver. 0.2.1)'
 ]
 
 # version header
@@ -141,14 +165,16 @@ db_begin('05_hit20')
 
 print(tableList())
 
-HDF5FileName = 'CO_HDF5'
+HDF5FileName = 'CO_HDF5.hdf5'
 
-OpenHDF5(HDF5FileName, ParametersCalculation)
-
-
-
+co_hdf5 = OpenHDF5(HDF5FileName, ParametersCalculation)
 
 CalculateXsec()
+
+
+CloseHDF5(co_hdf5)
+
+
 
 
 
