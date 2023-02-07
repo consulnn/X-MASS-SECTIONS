@@ -58,7 +58,9 @@ def openParametersFile(fname):
             # splitting names and values
             params = [item.split(':') for item in lines]
             if (FLAG_DEBUG_PRINT):
+                print('*** DEBUG: Parameters input ***')
                 [print(item[0],'\t',item[1]) for item in params]
+                print('*** END: Parameters input ***\n')
         print('*********\nParameters file %s is opened well\n*********'%(fname))
         return params
     except FileNotFoundError:
@@ -81,6 +83,16 @@ def OpenHDF5(fname,params):
         FLAG_OPENED_HDF5 = True
         
         print('*********\nHDF5 file %s is opened well\n*********'%(fname))
+        
+# saturating the attributes        
+        [f.attrs.__setitem__(item[0],item[1]) for item in params[:6] ]
+
+        if (FLAG_DEBUG_PRINT):
+            print('*** DEBUG: Attributes ***')
+            [print(item, f.attrs[item]) for item in f.attrs.keys()]
+            print('*** END: Attributes ***\n')
+        
+        
         return f
     except FileExistsError:
         print('Attempt to re-write file!')
@@ -129,7 +141,7 @@ def CalculateXsec():
 
 
 # flag to print values in functions to debug
-FLAG_DEBUG_PRINT = False
+FLAG_DEBUG_PRINT = True
 # flag to open\close HDF5 file 
 FLAG_OPENED_HDF5 = False
 
@@ -151,7 +163,8 @@ XMASSSEC_VERSION = '0.2.1'; __version__ = XMASSSEC_VERSION
 XMASSSEC_HISTORY = [
 'INITIATION OF INPUT FILE WITH PARAMETERS 31.01.23 (ver. 0.1)',
 'CREATION OF HDF5 FILE + SOME EXCEPTIONS HANDLING (ver. 0.2)',
-'CLOSING HDF5 FILE AND SATURATION OF ATTRIBUTES (ver. 0.2.1)'
+'CLOSING HDF5 FILE AND SATURATION OF ATTRIBUTES (ver. 0.2.1)',
+'SATURATION OF ATTRIBUTE (ROOT) (ver. 0.2.2)'
 ]
 
 # version header
