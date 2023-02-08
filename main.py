@@ -74,9 +74,52 @@ def openParametersFile(fname):
         print('WOW, UNKNOWN ERROR: %s'%(err))
         sys.exit()
 
+# opens pressure array file
+def openPressure(fname):
+    try:
+        apres = np.genfromtxt(fname,dtype='float')
+        global FLAG_DEBUG_PRINT
+        if (FLAG_DEBUG_PRINT):
+            print('*** DEBUG: Pressure input ***')
+            [print('%12.6f'%(item)) for item in apres]
+            print('*** END: Pressure input ***\n')
+        print('*********\nPressure file %s is opened well\nTotal number of lines: %d\n*********'%(fname,len(apres)))
+        return apres, len(apres)
+    except FileNotFoundError:
+        print('%s file is not found!'%fname)
+        sys.exit()
+    
+# opens temperature array file
+def openTemp(fname,Np):
+    class PxTError(Exception):
+        'Corrupted relations between Np and NpxNt array'
+        pass
+    try:
+        atemp = np.genfromtxt(fname,dtype='float', missing_values='296.15')
+        (Npp, Ntt) = atemp.shape
+        if (Npp!=Np):
+            raise PxTError
+        if (FLAG_DEBUG_PRINT):
+            print('*** DEBUG: Temperature input ***')
+            for item in atemp:
+                [print(item1, end='\t') for item1 in item]
+                print('')
+            print('*** END: Temperature input ***\n')
+        print('*********\nTemperature file %s is opened well\nTotal number of lines: %d\nNo of temperatures: %d\n*********'%(fname,Npp,Ntt))
+        return atemp, Npp, Ntt
+    except FileNotFoundError:
+        print('%s file is not found!'%fname)
+        sys.exit()
+    except PxTError:
+        print('Corrupted relations between Np and NpxNt array')
+        sys.exit()
+
+
 # creates a file HDF5 and saturate it with attributes
-def OpenHDF5(fname,params):
+def OpenHDF5(fname,params,pres, temp, Np, Nt):
     global FLAG_DEBUG_PRINT
+    INDEX_TEMP = '%02d'%(5)
+    print(INDEX_TEMP)
     try:
         f = h5py.File(fname, mode='w')
         global FLAG_OPENED_HDF5 
@@ -91,8 +134,11 @@ def OpenHDF5(fname,params):
             print('*** DEBUG: Attributes ***')
             [print(item, f.attrs[item]) for item in f.attrs.keys()]
             print('*** END: Attributes ***\n')
-        
-        
+        # f.create_dataset('Gas_05_Absorption',shape=)
+        f.create_dataset('Gas_Index',data=INDEX_TEMP)
+        f.create_dataset('Pressure',data=pres)
+        f.create_dataset('Temperature',data=temp)
+        print(f.keys())
         return f
     except FileExistsError:
         print('Attempt to re-write file!')
@@ -159,12 +205,14 @@ if not os.path.exists("./datafiles"):
 print("Timer started")
 t_begin = time.time()
 
-XMASSSEC_VERSION = '0.2.1'; __version__ = XMASSSEC_VERSION
+XMASSSEC_VERSION = '0.2.3'; __version__ = XMASSSEC_VERSION
 XMASSSEC_HISTORY = [
 'INITIATION OF INPUT FILE WITH PARAMETERS 31.01.23 (ver. 0.1)',
 'CREATION OF HDF5 FILE + SOME EXCEPTIONS HANDLING (ver. 0.2)',
 'CLOSING HDF5 FILE AND SATURATION OF ATTRIBUTES (ver. 0.2.1)',
-'SATURATION OF ATTRIBUTE (ROOT) (ver. 0.2.2)'
+'SATURATION OF ATTRIBUTE (ROOT) (ver. 0.2.2)',
+'INPUTS FOR P,T AND SATURATION OF ATTRUBUTES (ver. 0.2.3)',
+'INPUTS FOR VMS AND SATURATION OF ATTRUBUTES (ver. 0.2.x)'
 ]
 
 # version header
@@ -172,7 +220,20 @@ print('X-MASS-SEC version: %s'%(XMASSSEC_VERSION))
 
 INPUT_FILENAME = 'params.inp'
 
+PRES_FILENAME = 'pres.inp'
+
+TEMP_FILENAME = 'temps.inp'
+
 ParametersCalculation = openParametersFile(INPUT_FILENAME)
+
+Pressures, Np = openPressure(PRES_FILENAME)
+
+(Temps, Npp,Ntt) = openTemp(TEMP_FILENAME, Np)
+
+
+
+
+
 
 db_begin('05_hit20')
 
@@ -180,7 +241,7 @@ print(tableList())
 
 HDF5FileName = 'CO_HDF5.hdf5'
 
-co_hdf5 = OpenHDF5(HDF5FileName, ParametersCalculation)
+co_hdf5 = OpenHDF5(HDF5FileName, ParametersCalculation, Pressures, Temps, Npp, Ntt)
 
 CalculateXsec()
 
