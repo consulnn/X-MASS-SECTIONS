@@ -209,17 +209,23 @@ def CloseHDF5(ftype):
         sys.exit()
 
 # calculate x-sec for exact P, T, VMS of exact molecule
-def CalculateXsec():
+def CalculateXsec(pres, Temp, VMS, WN_range, IndexMol, IndexBroad ):
     
+    db_begin('05_hit20')
+
+    print(tableList())
+
+    CoefFileName = './datafiles/%06.2fT_Id%02d_%06.4fatm_IdBroad%02d_%06.4fVMS_hit20.dat'%(Temp,IndexMol,pres,IndexBroad,VMS)
+
+    nu_co,coef_co = absorptionCoefficient_Voigt(SourceTables='COall',
+                                                 HITRAN_units=True, OmegaRange=[0,15000],
+                                                 WavenumberWing=25.0,
+                                                 Diluent={'self':1.00-VMS, 'H2O':VMS},
+                                                 Environment={'T':Temp,'p':pres},
+                                                 File = CoefFileName)
+
     
-    
-    
-    
-    
-    
-    
-    
-    return
+    return coef_co
 
 
 
@@ -256,7 +262,8 @@ XMASSSEC_HISTORY = [
 'CLOSING HDF5 FILE AND SATURATION OF ATTRIBUTES (ver. 0.2.1)',
 'SATURATION OF ATTRIBUTE (ROOT) (ver. 0.2.2)',
 'INPUTS FOR P,T AND SATURATION OF ATTRUBUTES (ver. 0.2.3)',
-'INPUTS FOR VMS, WN AND SATURATION OF ATTRUBUTES + OUTPUT LOG FILE (ver. 0.2.4)'
+'INPUTS FOR VMS, WN AND SATURATION OF ATTRUBUTES + OUTPUT LOG FILE (ver. 0.2.4)',
+'CALCULATING X-SEC (ver. 0.3)'
 ]
 
 # version header
@@ -284,6 +291,8 @@ VMS_FILENAME = 'vms.inp'
 
 WN_FILENAME = 'wn.inp'
 
+HDF5FileName = 'CO_HDF5.hdf5'
+
 ParametersCalculation = openParametersFile(INPUT_FILENAME)
 
 Pressures, Np = openPressure(PRES_FILENAME)
@@ -294,11 +303,6 @@ Pressures, Np = openPressure(PRES_FILENAME)
 
 WNs, Nwn = openXgenetareWn(WN_FILENAME,ParametersCalculation)
 
-db_begin('05_hit20')
-
-print(tableList())
-
-HDF5FileName = 'CO_HDF5.hdf5'
 
 co_hdf5 = OpenHDF5(HDF5FileName, ParametersCalculation, Pressures, Temps, VMSs, Npp, Ntt, Nvms)
 
@@ -306,7 +310,7 @@ co_hdf5 = OpenHDF5(HDF5FileName, ParametersCalculation, Pressures, Temps, VMSs, 
 
 
 
-CalculateXsec()
+CalculateXsec(1.0, 296.15,0.05,np.linspace(0.0,15000.0,1500000),5,1)
 
 
 CloseHDF5(co_hdf5)
