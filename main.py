@@ -1,5 +1,5 @@
 if __name__ == "__main__":
-    print('XMASSSECTION: program to calculate and store cross-sections in HDF5 files.')
+    print('\nXMASSSECTION: program to calculate and store cross-sections in HDF5 files.\n')
 
 import math
 import os
@@ -20,7 +20,7 @@ import h5py
 #############################################################
 # TO DO #####################################################
 #############################################################
-# FULL NUMBER OF PARAMS #####################################
+# TRY/EXCEPT IN XSEC ########################################
 #############################################################
 
 
@@ -153,7 +153,7 @@ def openXgenetareWn(fname,params):
 
 
 # creates a file HDF5 and saturate it with attributes
-def OpenHDF5(fname,params,pres, temp, vms, Np, Nt, Nvms):
+def OpenHDF5(fname,params,pres, temp, vms, Np, Nt, Nvms, Nwn):
     global FLAG_DEBUG_PRINT
     INDEX_TEMP = '%02d'%(5)
     INDEX_Qbrd_TEMP = '%02d'%(1)
@@ -168,19 +168,28 @@ def OpenHDF5(fname,params,pres, temp, vms, Np, Nt, Nvms):
 # saturating the attributes        
         [f.attrs.__setitem__(item[0],item[1]) for item in params[:6] ]
 
-        if (FLAG_DEBUG_PRINT):
-            print('*** DEBUG: Attributes ***')
-            [print(item, f.attrs[item]) for item in f.attrs.keys()]
-            print('*** END: Attributes ***\n')
-        # f.create_dataset('Gas_05_Absorption',shape=)
+        Index_abs = '%02d'%(int(params[10][1]))
+        Index_broad = '%02d'%(int(params[15][1]))
+        dataset_name = 'Gas_'+Index_abs+'_Absorption'
+        dataset_broadname = 'Broadener_'+Index_broad+'_VMS'
+        ds_coef = f.create_dataset(dataset_name,shape=(Np,Nt,Nvms,Nwn))#, compression="gzip", compression_opts=4)
+        ds_coef.attrs.__setitem__('addl_ident', '')
+        ds_coef.attrs.__setitem__('gas_name', 'CO')
+        ds_coef.attrs.__setitem__('comment', '')
 
         ds_index = f.create_dataset('Gas_Index',data=INDEX_TEMP)
         ds_pres = f.create_dataset('Pressure',data=pres)
         ds_temp = f.create_dataset('Temperature',data=temp)
-        ds_vms = f.create_dataset('Broadener_01_VMS',data=vms)
+        ds_vms = f.create_dataset(dataset_broadname,data=vms)
         ds_vms.attrs.__setitem__('broadener_name','h2o')
         ds_Qbrd = f.create_dataset('Broadener_Index',data=INDEX_Qbrd_TEMP)
 #        print(ds_pres[()])
+        if (FLAG_DEBUG_PRINT):
+            print('*** DEBUG: Attributes ***')
+            [print(item, f.attrs[item]) for item in f.attrs.keys()]
+            print(f.keys())
+            [print(f[item]) for item in f.keys()]
+            print('*** END: Attributes ***\n')
         return f
     except FileExistsError:
         print('Attempt to re-write file!')
@@ -208,26 +217,62 @@ def CloseHDF5(ftype):
         print("Unexpected %s"%(err))
         sys.exit()
 
+def SaveHDF5(ftype, p,t,vms,coef_):
+    try:
+        global FLAG_OPENED_HDF5 
+        if ((FLAG_OPENED_HDF5 != True) or (ftype.__repr__()=='<Closed HDF5 file>')):
+            raise FileNotFoundError
+        else:
+            
+
+            return
+    except FileNotFoundError:
+        print('File to work with is not found or already closed')
+        sys.exit()
+    else:
+        err = Exception
+        print("Unexpected %s"%(err))
+        sys.exit()
+    
+
 # calculate x-sec for exact P, T, VMS of exact molecule
-def CalculateXsec(pres, Temp, VMS, WN_range, IndexMol, IndexBroad ):
+def CalculateXsec(pres, Temp, VMS, WN_range, IndexMol, IndexBroad, param, Nwn):
     
     db_begin('05_hit20')
+    
+    wn_begin = float(param[3][1])
+    wn_end = float(param[4][1])
 
-    print(tableList())
+    wn_step = (wn_end-wn_begin)/(Nwn-1)
+
+    if (FLAG_DEBUG_PRINT):
+        print('*** DEBUG: X-sec ***')
+        print('VMS=%4.2f, type='%VMS, type(VMS))
+#        print(tableList())
+        print('Range from %8.2f to %8.2f, step %6.2f'%(wn_begin, wn_end,wn_step))
+        print('Pressure=%6.2f, temperature=%7.2f'%(pres,Temp))
+        print('*** END: X-sec ***\n')
 
     CoefFileName = './datafiles/%06.2fT_Id%02d_%06.4fatm_IdBroad%02d_%06.4fVMS_hit20.dat'%(Temp,IndexMol,pres,IndexBroad,VMS)
 
     nu_co,coef_co = absorptionCoefficient_Voigt(SourceTables='COall',
-                                                 HITRAN_units=True, OmegaRange=[0,15000],
+                                                 HITRAN_units=True, OmegaRange=[wn_begin,wn_end],
+                                                 WavenumberStep=wn_step,
                                                  WavenumberWing=25.0,
                                                  Diluent={'self':1.00-VMS, 'H2O':VMS},
                                                  Environment={'T':Temp,'p':pres},
                                                  File = CoefFileName)
-
     
     return coef_co
 
-
+def UpdateHDF5(ftype, co_array, i_p, i_t, i_vms):
+    Index_abs = '%02d'%(int(ftype['Gas_Index'][()]))
+    dataset_name = 'Gas_'+Index_abs+'_Absorption'
+    set_abs = ftype[dataset_name][()]
+    Nwn = len(co_array)
+    set_abs[i_p][i_t][i_vms][:] = co_array
+    ftype[dataset_name][()] = set_abs
+    return ftype
 
 
 
@@ -235,7 +280,7 @@ def CalculateXsec(pres, Temp, VMS, WN_range, IndexMol, IndexBroad ):
 
 
 # flag to print values in functions to debug 
-FLAG_DEBUG_PRINT = True
+FLAG_DEBUG_PRINT = False
 # flag to store prints in OUTPUT.LOG file
 FLAG_LOG_FILE = True
 # flag to open\close HDF5 file 
@@ -247,15 +292,18 @@ if not os.path.exists("./images"):
 
 if not os.path.exists("./datafiles"):
     os.mkdir("./datafiles")
+fLog = open('output.log', 'w')
+fLog.close()
+if (FLAG_LOG_FILE):
+    orig_stdout = sys.stdout
+    fLog = open('output.log', 'a')
+    sys.stdout = fLog
+
 
 #############################################################
 ### BEGIN OF MAIN PART ######################################
 #############################################################
-
-print("Timer started")
-t_begin = time.time()
-
-XMASSSEC_VERSION = '0.2.4'; __version__ = XMASSSEC_VERSION
+XMASSSEC_VERSION = '0.3.1'; __version__ = XMASSSEC_VERSION
 XMASSSEC_HISTORY = [
 'INITIATION OF INPUT FILE WITH PARAMETERS 31.01.23 (ver. 0.1)',
 'CREATION OF HDF5 FILE + SOME EXCEPTIONS HANDLING (ver. 0.2)',
@@ -263,7 +311,8 @@ XMASSSEC_HISTORY = [
 'SATURATION OF ATTRIBUTE (ROOT) (ver. 0.2.2)',
 'INPUTS FOR P,T AND SATURATION OF ATTRUBUTES (ver. 0.2.3)',
 'INPUTS FOR VMS, WN AND SATURATION OF ATTRUBUTES + OUTPUT LOG FILE (ver. 0.2.4)',
-'CALCULATING X-SEC (ver. 0.3)'
+'CALCULATING X-SEC (ver. 0.3)',
+'CALCULATING X-SEC, DEBUG INFO (ver.0.3.1)'
 ]
 
 # version header
@@ -271,13 +320,9 @@ print('X-MASS-SEC version: %s'%(XMASSSEC_VERSION))
 
 #####################################################
 
-if (FLAG_LOG_FILE):
-    orig_stdout = sys.stdout
-    fLog = open('output.log', 'w')
-    sys.stdout = fLog
-else:
-    fLog = open('output.log', 'w')
-    fLog.close()
+print("Timer started")
+t_begin = time.time()
+
 
 
 
@@ -303,62 +348,33 @@ Pressures, Np = openPressure(PRES_FILENAME)
 
 WNs, Nwn = openXgenetareWn(WN_FILENAME,ParametersCalculation)
 
+co_hdf5 = OpenHDF5(HDF5FileName, ParametersCalculation, Pressures, Temps, VMSs, Npp, Ntt, Nvms, Nwn)
 
-co_hdf5 = OpenHDF5(HDF5FileName, ParametersCalculation, Pressures, Temps, VMSs, Npp, Ntt, Nvms)
+for ip in np.arange(Npp):
+    for it in np.arange(Ntt):
+        for ivms in np.arange(Nvms):
+            ptemp = Pressures[ip]
+            ttemp = Temps[ip,it]
+            vmstemp = VMSs[ivms]
+            print(ptemp,ttemp,vmstemp)
+            
+            
+            
+            
+            
+            coeffs = CalculateXsec(ptemp, ttemp,vmstemp,WNs,5,1,ParametersCalculation,Nwn)
 
-#print(co_hdf5['Broadener_01_VMS'].attrs['broadener_name'])
-
-
-
-CalculateXsec(1.0, 296.15,0.05,np.linspace(0.0,15000.0,1500000),5,1)
-
+            co_hdf5 = UpdateHDF5(co_hdf5, coeffs, ip, it, ivms)
 
 CloseHDF5(co_hdf5)
 
 
 
 
+t_end = time.time()
+print('Time taken: %d seconds'%(t_end-t_begin))
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+print('\nDone.')
 
 if (FLAG_LOG_FILE):
     sys.stdout = orig_stdout
@@ -366,10 +382,7 @@ if (FLAG_LOG_FILE):
 
 
 
-t_end = time.time()
-print('Time taken: %d seconds'%(t_end-t_begin))
 
-print('Done.')
 
 
 
