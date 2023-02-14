@@ -153,7 +153,7 @@ def openXgenetareWn(fname,params):
 
 
 # creates a file HDF5 and saturate it with attributes
-def OpenHDF5(fname,params,pres, temp, vms, Np, Nt, Nvms, Nwn):
+def OpenHDF5(fname,params,pres, temp, vms, wns, Np, Nt, Nvms, Nwn):
     global FLAG_DEBUG_PRINT
     INDEX_TEMP = '%02d'%(5)
     INDEX_Qbrd_TEMP = '%02d'%(1)
@@ -183,6 +183,9 @@ def OpenHDF5(fname,params,pres, temp, vms, Np, Nt, Nvms, Nwn):
         ds_vms = f.create_dataset(dataset_broadname,data=vms)
         ds_vms.attrs.__setitem__('broadener_name','h2o')
         ds_Qbrd = f.create_dataset('Broadener_Index',data=INDEX_Qbrd_TEMP)
+        
+        ds_wns = f.create_dataset('Wavenumber',data=wns)
+        
 #        print(ds_pres[()])
         if (FLAG_DEBUG_PRINT):
             print('*** DEBUG: Attributes ***')
@@ -303,7 +306,7 @@ if (FLAG_LOG_FILE):
 #############################################################
 ### BEGIN OF MAIN PART ######################################
 #############################################################
-XMASSSEC_VERSION = '0.3.1'; __version__ = XMASSSEC_VERSION
+XMASSSEC_VERSION = '0.3.2'; __version__ = XMASSSEC_VERSION
 XMASSSEC_HISTORY = [
 'INITIATION OF INPUT FILE WITH PARAMETERS 31.01.23 (ver. 0.1)',
 'CREATION OF HDF5 FILE + SOME EXCEPTIONS HANDLING (ver. 0.2)',
@@ -312,7 +315,8 @@ XMASSSEC_HISTORY = [
 'INPUTS FOR P,T AND SATURATION OF ATTRUBUTES (ver. 0.2.3)',
 'INPUTS FOR VMS, WN AND SATURATION OF ATTRUBUTES + OUTPUT LOG FILE (ver. 0.2.4)',
 'CALCULATING X-SEC (ver. 0.3)',
-'CALCULATING X-SEC, DEBUG INFO (ver.0.3.1)'
+'CALCULATING X-SEC, DEBUG INFO (ver.0.3.1)',
+'FIX: MISSING WN RANGE IN HDF5 FILE (ver. 0.3.2)'
 ]
 
 # version header
@@ -348,7 +352,7 @@ Pressures, Np = openPressure(PRES_FILENAME)
 
 WNs, Nwn = openXgenetareWn(WN_FILENAME,ParametersCalculation)
 
-co_hdf5 = OpenHDF5(HDF5FileName, ParametersCalculation, Pressures, Temps, VMSs, Npp, Ntt, Nvms, Nwn)
+co_hdf5 = OpenHDF5(HDF5FileName, ParametersCalculation, Pressures, Temps, VMSs, WNs, Npp, Ntt, Nvms, Nwn)
 
 for ip in np.arange(Npp):
     for it in np.arange(Ntt):
