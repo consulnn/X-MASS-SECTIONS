@@ -240,33 +240,49 @@ def SaveHDF5(ftype, p,t,vms,coef_):
 
 # calculate x-sec for exact P, T, VMS of exact molecule
 def CalculateXsec(pres, Temp, VMS, WN_range, IndexMol, IndexBroad, param, Nwn):
+    class NaNError(Exception):
+        'Corrupted p, T or VMS value'
+        pass
     
-    db_begin('05_hit20')
+    try:
+        if ((pres!=pres) or (Temp!=Temp) or (VMS!=VMS)):
+            raise NaNError
+        
+        db_begin('05_hit20')
+        
+        wn_begin = float(param[3][1])
+        wn_end = float(param[4][1])
     
-    wn_begin = float(param[3][1])
-    wn_end = float(param[4][1])
-
-    wn_step = (wn_end-wn_begin)/(Nwn-1)
-
-    if (FLAG_DEBUG_PRINT):
-        print('*** DEBUG: X-sec ***')
-        print('VMS=%4.2f, type='%VMS, type(VMS))
-#        print(tableList())
-        print('Range from %8.2f to %8.2f, step %6.2f'%(wn_begin, wn_end,wn_step))
-        print('Pressure=%6.2f, temperature=%7.2f'%(pres,Temp))
-        print('*** END: X-sec ***\n')
-
-    CoefFileName = './datafiles/%06.2fT_Id%02d_%06.4fatm_IdBroad%02d_%06.4fVMS_hit20.dat'%(Temp,IndexMol,pres,IndexBroad,VMS)
-
-    nu_co,coef_co = absorptionCoefficient_Voigt(SourceTables='COall',
-                                                 HITRAN_units=True, OmegaRange=[wn_begin,wn_end],
-                                                 WavenumberStep=wn_step,
-                                                 WavenumberWing=25.0,
-                                                 Diluent={'self':1.00-VMS, 'H2O':VMS},
-                                                 Environment={'T':Temp,'p':pres},
-                                                 File = CoefFileName)
+        wn_step = (wn_end-wn_begin)/(Nwn-1)
     
-    return coef_co
+        if (FLAG_DEBUG_PRINT):
+            print('*** DEBUG: X-sec ***')
+            print('VMS=%4.2f, type='%VMS, type(VMS))
+    #        print(tableList())
+            print('Range from %8.2f to %8.2f, step %6.2f'%(wn_begin, wn_end,wn_step))
+            print('Pressure=%6.2f, temperature=%7.2f'%(pres,Temp))
+            print('*** END: X-sec ***\n')
+    
+        CoefFileName = './datafiles/%06.2fT_Id%02d_%06.4fatm_IdBroad%02d_%06.4fVMS_hit20.dat'%(Temp,IndexMol,pres,IndexBroad,VMS)
+    
+        nu_co,coef_co = absorptionCoefficient_Voigt(SourceTables='COall',
+                                                     HITRAN_units=True, OmegaRange=[wn_begin,wn_end],
+                                                     WavenumberStep=wn_step,
+                                                     WavenumberWing=25.0,
+                                                     Diluent={'self':1.00-VMS, 'H2O':VMS},
+                                                     Environment={'T':Temp,'p':pres},
+                                                     File = CoefFileName)
+        
+        return coef_co
+    except NaNError:
+        print('Corrupted p, T or VMS value')
+        return np.linspace(-1.0,-1.0,Nwn)
+    else:
+        err = Exception
+        print("Unexpected %s"%(err))
+        sys.exit()
+        
+        
 
 def UpdateHDF5(ftype, co_array, i_p, i_t, i_vms):
     Index_abs = '%02d'%(int(ftype['Gas_Index'][()]))
@@ -306,7 +322,7 @@ if (FLAG_LOG_FILE):
 #############################################################
 ### BEGIN OF MAIN PART ######################################
 #############################################################
-XMASSSEC_VERSION = '0.3.2'; __version__ = XMASSSEC_VERSION
+XMASSSEC_VERSION = '0.3.3'; __version__ = XMASSSEC_VERSION
 XMASSSEC_HISTORY = [
 'INITIATION OF INPUT FILE WITH PARAMETERS 31.01.23 (ver. 0.1)',
 'CREATION OF HDF5 FILE + SOME EXCEPTIONS HANDLING (ver. 0.2)',
@@ -316,7 +332,8 @@ XMASSSEC_HISTORY = [
 'INPUTS FOR VMS, WN AND SATURATION OF ATTRUBUTES + OUTPUT LOG FILE (ver. 0.2.4)',
 'CALCULATING X-SEC (ver. 0.3)',
 'CALCULATING X-SEC, DEBUG INFO (ver.0.3.1)',
-'FIX: MISSING WN RANGE IN HDF5 FILE (ver. 0.3.2)'
+'FIX: MISSING WN RANGE IN HDF5 FILE (ver. 0.3.2)',
+'FIX: NEW EXCEPTION IN X-SEC RELATED TO NAN VALUES OF P,T,VMS (ver. 0.3.3)'
 ]
 
 # version header
