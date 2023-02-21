@@ -12,6 +12,7 @@ sys.path.insert(1,'/work/WORK/WORK/scripts/regular_scripts')
 sys.path.insert(2,'/work/WORK/WORK/scripts/hapi2')
 import json
 from getpass import getpass
+from joblib import Parallel, delayed
 
 import pylab as pl
 import matplotlib as mpl
@@ -272,6 +273,8 @@ def CalculateXsec(pres, Temp, VMS, WN_range, IndexMol, IndexBroad, param, Nwn):
                                                      Diluent={'self':1.00-VMS, 'H2O':VMS},
                                                      Environment={'T':Temp,'p':pres},
                                                      File = CoefFileName)
+        if (FLAG_REMOVE_HAPI):
+            os.remove(CoefFileName)
         
         return coef_co
     except NaNError:
@@ -293,18 +296,25 @@ def UpdateHDF5(ftype, co_array, i_p, i_t, i_vms):
     ftype[dataset_name][()] = set_abs
     return ftype
 
-
-
-
+def ParallelPart(Pressures, Temps, VMSs,WNs,ParametersCalculation,Nwn, ip, it, ivms,co_hdf5):
+    ptemp = Pressures[ip]
+    ttemp = Temps[ip,it]
+    vmstemp = VMSs[ivms]
+    print(ptemp,ttemp,vmstemp)
+    
+    coeffs = CalculateXsec(ptemp, ttemp,vmstemp,WNs,5,1,ParametersCalculation,Nwn)
+    co_hdf5 = UpdateHDF5(co_hdf5, coeffs, ip, it, ivms)
+    return co_hdf5
 
 
 # flag to print values in functions to debug 
-FLAG_DEBUG_PRINT = False
+FLAG_DEBUG_PRINT = True
 # flag to store prints in OUTPUT.LOG file
 FLAG_LOG_FILE = True
 # flag to open\close HDF5 file 
 FLAG_OPENED_HDF5 = False
-
+# flag to remove HAPI files
+FLAG_REMOVE_HAPI = False
 
 if not os.path.exists("./images"):
     os.mkdir("./images")
@@ -322,7 +332,7 @@ if (FLAG_LOG_FILE):
 #############################################################
 ### BEGIN OF MAIN PART ######################################
 #############################################################
-XMASSSEC_VERSION = '0.3.3'; __version__ = XMASSSEC_VERSION
+XMASSSEC_VERSION = '0.4'; __version__ = XMASSSEC_VERSION
 XMASSSEC_HISTORY = [
 'INITIATION OF INPUT FILE WITH PARAMETERS 31.01.23 (ver. 0.1)',
 'CREATION OF HDF5 FILE + SOME EXCEPTIONS HANDLING (ver. 0.2)',
@@ -333,7 +343,8 @@ XMASSSEC_HISTORY = [
 'CALCULATING X-SEC (ver. 0.3)',
 'CALCULATING X-SEC, DEBUG INFO (ver.0.3.1)',
 'FIX: MISSING WN RANGE IN HDF5 FILE (ver. 0.3.2)',
-'FIX: NEW EXCEPTION IN X-SEC RELATED TO NAN VALUES OF P,T,VMS (ver. 0.3.3)'
+'FIX: NEW EXCEPTION IN X-SEC RELATED TO NAN VALUES OF P,T,VMS (ver. 0.3.3)',
+'FIRST ITERATION OF PARALLEL ATTEMPT (ver. 0.4)'
 ]
 
 # version header
@@ -386,6 +397,8 @@ for ip in np.arange(Npp):
             coeffs = CalculateXsec(ptemp, ttemp,vmstemp,WNs,5,1,ParametersCalculation,Nwn)
 
             co_hdf5 = UpdateHDF5(co_hdf5, coeffs, ip, it, ivms)
+            
+            
 
 CloseHDF5(co_hdf5)
 
