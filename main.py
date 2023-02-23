@@ -12,12 +12,31 @@ sys.path.insert(1,'/work/WORK/WORK/scripts/regular_scripts')
 sys.path.insert(2,'/work/WORK/WORK/scripts/hapi2')
 import json
 from getpass import getpass
-from joblib import Parallel, delayed
 
 import pylab as pl
 import matplotlib as mpl
 import time
 import h5py
+
+import asyncio
+import nest_asyncio
+nest_asyncio.apply()
+def background(f):
+    def wrapped(*args, **kwargs):
+        return asyncio.get_event_loop().run_in_executor(None, f, *args, **kwargs)
+
+    return wrapped
+
+
+
+
+
+
+
+
+
+
+
 #############################################################
 # TO DO #####################################################
 #############################################################
@@ -173,7 +192,7 @@ def OpenHDF5(fname,params,pres, temp, vms, wns, Np, Nt, Nvms, Nwn):
         Index_broad = '%02d'%(int(params[15][1]))
         dataset_name = 'Gas_'+Index_abs+'_Absorption'
         dataset_broadname = 'Broadener_'+Index_broad+'_VMS'
-        ds_coef = f.create_dataset(dataset_name,shape=(Np,Nt,Nvms,Nwn))#, compression="gzip", compression_opts=4)
+        ds_coef = f.create_dataset(dataset_name,shape=(Np,Nt,Nvms,Nwn),dtype='float64')#, compression="gzip", compression_opts=4)
         ds_coef.attrs.__setitem__('addl_ident', '')
         ds_coef.attrs.__setitem__('gas_name', 'CO')
         ds_coef.attrs.__setitem__('comment', '')
@@ -249,7 +268,6 @@ def CalculateXsec(pres, Temp, VMS, WN_range, IndexMol, IndexBroad, param, Nwn):
         if ((pres!=pres) or (Temp!=Temp) or (VMS!=VMS)):
             raise NaNError
         
-        db_begin('05_hit20')
         
         wn_begin = float(param[3][1])
         wn_end = float(param[4][1])
@@ -296,12 +314,13 @@ def UpdateHDF5(ftype, co_array, i_p, i_t, i_vms):
     ftype[dataset_name][()] = set_abs
     return ftype
 
+# @background
 def ParallelPart(Pressures, Temps, VMSs,WNs,ParametersCalculation,Nwn, ip, it, ivms,co_hdf5):
     ptemp = Pressures[ip]
     ttemp = Temps[ip,it]
     vmstemp = VMSs[ivms]
     print(ptemp,ttemp,vmstemp)
-    
+    print(ip,it,ivms)
     coeffs = CalculateXsec(ptemp, ttemp,vmstemp,WNs,5,1,ParametersCalculation,Nwn)
     co_hdf5 = UpdateHDF5(co_hdf5, coeffs, ip, it, ivms)
     return co_hdf5
@@ -314,7 +333,7 @@ FLAG_LOG_FILE = True
 # flag to open\close HDF5 file 
 FLAG_OPENED_HDF5 = False
 # flag to remove HAPI files
-FLAG_REMOVE_HAPI = False
+FLAG_REMOVE_HAPI = True
 
 if not os.path.exists("./images"):
     os.mkdir("./images")
@@ -332,7 +351,7 @@ if (FLAG_LOG_FILE):
 #############################################################
 ### BEGIN OF MAIN PART ######################################
 #############################################################
-XMASSSEC_VERSION = '0.4'; __version__ = XMASSSEC_VERSION
+XMASSSEC_VERSION = '0.4.1'; __version__ = XMASSSEC_VERSION
 XMASSSEC_HISTORY = [
 'INITIATION OF INPUT FILE WITH PARAMETERS 31.01.23 (ver. 0.1)',
 'CREATION OF HDF5 FILE + SOME EXCEPTIONS HANDLING (ver. 0.2)',
@@ -344,7 +363,8 @@ XMASSSEC_HISTORY = [
 'CALCULATING X-SEC, DEBUG INFO (ver.0.3.1)',
 'FIX: MISSING WN RANGE IN HDF5 FILE (ver. 0.3.2)',
 'FIX: NEW EXCEPTION IN X-SEC RELATED TO NAN VALUES OF P,T,VMS (ver. 0.3.3)',
-'FIRST ITERATION OF PARALLEL ATTEMPT (ver. 0.4)'
+'FIRST ITERATION OF PARALLEL ATTEMPT (ver. 0.4)',
+'FIX: FLOAT64 FOR DTYPE (ver.0.4.1)'
 ]
 
 # version header
@@ -382,23 +402,33 @@ WNs, Nwn = openXgenetareWn(WN_FILENAME,ParametersCalculation)
 
 co_hdf5 = OpenHDF5(HDF5FileName, ParametersCalculation, Pressures, Temps, VMSs, WNs, Npp, Ntt, Nvms, Nwn)
 
+db_begin('05_hit20')
+
+
 for ip in np.arange(Npp):
     for it in np.arange(Ntt):
         for ivms in np.arange(Nvms):
-            ptemp = Pressures[ip]
-            ttemp = Temps[ip,it]
-            vmstemp = VMSs[ivms]
-            print(ptemp,ttemp,vmstemp)
-            
-            
-            
-            
-            
-            coeffs = CalculateXsec(ptemp, ttemp,vmstemp,WNs,5,1,ParametersCalculation,Nwn)
+            ParallelPart(Pressures,Temps,VMSs,WNs,ParametersCalculation,Nwn,ip,it,ivms,co_hdf5)
+            # ptemp = Pressures[ip]
+            # ttemp = Temps[ip,it]
+            # vmstemp = VMSs[ivms]
+            # print(ptemp,ttemp,vmstemp)
+            # coeffs = CalculateXsec(ptemp, ttemp,vmstemp,WNs,5,1,ParametersCalculation,Nwn)
+            # co_hdf5 = UpdateHDF5(co_hdf5, coeffs, ip, it, ivms)
 
-            co_hdf5 = UpdateHDF5(co_hdf5, coeffs, ip, it, ivms)
-            
-            
+
+# for it in np.arange(Ntt):
+#     for ivms in np.arange(Nvms):
+#         loop = asyncio.get_event_loop()                                              # Have a new event loop
+
+#         looper = asyncio.gather(*[ParallelPart(Pressures,Temps,VMSs,WNs,ParametersCalculation,Nwn,ip,it,ivms,co_hdf5) for ip in np.arange(Npp) ])         # Run the loop
+                               
+#         results = loop.run_until_complete(looper)             
+
+
+
+
+
 
 CloseHDF5(co_hdf5)
 

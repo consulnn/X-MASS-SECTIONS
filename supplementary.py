@@ -25,8 +25,9 @@ import h5py
 
 f = h5py.File('CO_HDF5.hdf5', mode='r')
 
+print(f.keys())
 
-coef_hdf5 = f['Gas_05_Absorption'][()][4][3][4]
+coef_hdf5 = f['Gas_05_Absorption'][()][1][2][0]
 nu_hdf5 = f['Wavenumber'][()]
 
 print(nu_hdf5, coef_hdf5)
@@ -41,8 +42,8 @@ wn_end = 15000.0
 Nwn = 1500001
 
 pres = 1.0
-Temp = 1347.88
-VMS = 0.30
+Temp = 296.15
+VMS = 0.00
 
 
 wn_step = (wn_end-wn_begin)/(Nwn-1)
@@ -56,7 +57,7 @@ nu_co,coef_co = absorptionCoefficient_Voigt(SourceTables='COall',
                                              Environment={'T':Temp,'p':pres},
                                              File = './datafiles/test_4_pict.dat')
  
-nu_co += 0.5
+
 
 plt.rcParams.update({
     "text.usetex": True,
@@ -80,42 +81,45 @@ plt.rc('figure', titlesize=30)  # fontsize of the figure title
 
 resolution_pnnl = 0.015
 
-nu_start =    45.0
-nu_end   =    50.0
+nu_start =      0.0
+nu_end   =  15000.0
 
-y_start = 1.0e-24
-y_end   = 1.0e-20
+y_start = 1.0e-26
+y_end   = 1.0e-17
 
 axYlog = True
 
+pict_open = False
 
 
 title_band = r'CO test spectra'
 
 figure1 = plt.figure(figsize=(24,12),dpi=420)
-ax = figure1.add_subplot(111)
+ax1 = figure1.add_subplot(211)
+ax2 = figure1.add_subplot(212, sharex=ax1)
 
-ax.set_title(title_band, y=1.05)
+ax1.set_title(title_band, y=1.05)
 #ax.set_xscale('log')
 if (axYlog):
-    ax.set_yscale('log')
+    ax1.set_yscale('log')
 
-ax.set_xlim(nu_start, nu_end)
-ax.set_ylim(y_start,y_end)
-ax.set_xlabel(r'Wavenumber, cm$^{-1}$')
-ax.set_ylabel('Cross-section, cm$^2$/molecule')
+ax1.set_xlim(nu_start, nu_end)
+ax1.set_ylim(y_start,y_end)
+ax1.set_xlabel(r'Wavenumber, cm$^{-1}$')
+ax1.set_ylabel('Cross-section, cm$^2$/molecule')
 
+#ax2.set_ylim(-1e-25,1e-25)
+ax1.plot(nu_co, coef_co, label=r'CO HITRAN spectra, 0.30 water, T=%6.2f K, %4.2f atm)'%(Temp,pres),alpha=0.5,color=(0.1,0.1,0.9),linewidth=1.0)
+ax1.plot(nu_hdf5, coef_hdf5, label=r'CO HITRAN spectra (HDF5), 0.30 water, T=%6.2f K, %4.2f atm)'%(Temp,pres),alpha=0.5,color=(0.9,0.1,0.1),linewidth=1.0)
 
-ax.plot(nu_co, coef_co, label=r'CO HITRAN spectra, 0.30 water, T=%6.2f K, %4.2f atm)'%(Temp,pres),alpha=0.5,color=(0.1,0.1,0.9),linewidth=1.0)
-ax.plot(nu_hdf5, coef_hdf5, label=r'CO HITRAN spectra (HDF5), 0.30 water, T=%6.2f K, %4.2f atm)'%(Temp,pres),alpha=0.5,color=(0.9,0.1,0.1),linewidth=1.0)
-#ax.scatter(linelist['freq'], linelist['intens'])
-ax.legend()
+ax2.plot(nu_co, coef_co-coef_hdf5)
+
+ax1.legend()
 
 #plt.savefig('./images/absorb_report_2nu8_hcn.jpg',bbox_inches='tight')
 plt.savefig('./images/cross_test_calc_vs_HDF5_XSEC_CO.jpg',bbox_inches='tight')
 plt.close()
 
-pict_open = False
 
 dtype1 = np.dtype([('nu','float'),('coef','float')])
 
