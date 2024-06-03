@@ -1,0 +1,21 @@
+# /bin/sh 
+# ----------------Parameters---------------------- #
+#$  -S /bin/sh
+#$ -q sThM.q
+#$ -l mres=16G,h_data=16G,h_vmem=16G,himem
+#$ -cwd
+#$ -j y
+#$ -N xmass
+#$ -o xmass.log
+#
+# ----------------Modules------------------------- #
+module load intel/python/39-22.1
+module load hdf5_18/1.8.21
+#
+# ----------------Your Commands------------------- #
+#
+echo + `date` job $JOB_NAME started in $QUEUE with jobID=$JOB_ID on $HOSTNAME
+#
+python main.py
+#
+echo = `date` job $JOB_NAME done

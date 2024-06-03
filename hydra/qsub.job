@@ -1,0 +1,18 @@
+# /bin/sh 
+# ----------------Parameters---------------------- #
+#$ -S /bin/sh
+#$ -q sThC.q
+#$ -l mres=8G,h_data=8G,h_vmem=8G
+#$ -cwd
+#$ -j y
+#
+# ----------------Modules------------------------- #
+module load intel/python/39-22.1
+#
+# ----------------Your Commands------------------- #
+#
+echo + `date` job $JOB_NAME started in $QUEUE with jobID=$JOB_ID on $HOSTNAME
+#
+python main.py 
+#
+echo = `date` job $JOB_NAME done

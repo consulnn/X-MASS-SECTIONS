@@ -1,0 +1,17 @@
+version:31.01.23
+addl_ident:
+gas_name:CO
+wn_begin:1850.0
+wn_end:3350.0
+comment:TEST CASE
+Gas_Q_abs_Absorbtion:CO
+addl_ident:
+gas_name:CO
+comment:TEST CASE
+Gas_index:05
+Pressure:10
+Temperature:10
+Broadener_Q_brd_VMR:10
+broadener_name:air
+Broadener_Index:00
+Wavenumber:1501
