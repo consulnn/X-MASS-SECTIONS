@@ -1,14 +1,14 @@
 version:31.01.23
 addl_ident:
-gas_name:N2O
+gas_name:O2
 wn_begin:0.0
 wn_end:35000.0
 comment:TEST CASE
-Gas_Q_abs_Absorbtion:CO
+Gas_Q_abs_Absorbtion:O2
 addl_ident:
-gas_name:CO
+gas_name:O2
 comment:TEST CASE
-Gas_index:04
+Gas_index:07
 Pressure:10
 Temperature:13
 Broadener_Q_brd_VMR:10

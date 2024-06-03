@@ -1,45 +1,16 @@
-
-# import numpy as np
-# import matplotlib.pyplot as plt
-# import os
-# import sys
-# import time
-
-
-# from library_xmass import openParametersFile, openPressure, openTemp, openVMS, openXgenetareWn, OpenHDF5, CloseHDF5, ParallelPart
-
-# import asyncio
-# import nest_asyncio
-# nest_asyncio.apply()
-# def background(f):
-#     def wrapped(*args, **kwargs):
-#         return asyncio.get_event_loop().run_in_executor(None, f, *args, **kwargs)
-
-#     return wrapped
-
-# from hapi import db_begin
-
+#library for X-MASS script
+#Makhnev V.Yu., 08.03.2023
 
 
 import math
 import os
 import sys
-
-import cProfile
-
-
-#sys.path.insert(1,'/Work_remote/WORK/scripts')
-sys.path.insert(2,'/work/WORK/WORK/scripts/hapi2')
-#sys.path.insert(3,'/Work_remote/WORK/scripts/hapiN')
-#sys.path.insert(3,'/Work_remote/WORK/scripts/hapi-master/hapi')
-
-
-
 #from hapi2 import *
-#from hapi import *
-from hapiN import *
+from hapi import *
 import numpy as np
 import matplotlib.pyplot as plt
+sys.path.insert(1,'/work/WORK/WORK/scripts/regular_scripts')
+sys.path.insert(2,'/work/WORK/WORK/scripts/hapi2')
 import json
 from getpass import getpass
 
@@ -58,15 +29,6 @@ def background(f):
 
     return wrapped
 
-# flag to print values in functions to debug 
-FLAG_DEBUG_PRINT = True
-# flag to store prints in OUTPUT.LOG file
-FLAG_LOG_FILE = True
-# flag to open\close HDF5 file 
-FLAG_OPENED_HDF5 = False
-# flag to remove HAPI files
-FLAG_REMOVE_HAPI = False
-
 
 
 
@@ -79,8 +41,8 @@ def openParametersFile(fname):
     class ParamsError(Exception):
         pass
     try:
-        global FLAG_DEBUG_PRINT
         with open(fname,'r') as finp:
+            global FLAG_DEBUG_PRINT
             # input as list of lines in 'lines'
             lines = finp.readlines()
             # check if input has enough parameters
@@ -114,7 +76,7 @@ def openPressure(fname):
         global FLAG_DEBUG_PRINT
         if (FLAG_DEBUG_PRINT):
             print('*** DEBUG: Pressure input ***')
-            [print('%16.9f'%(item)) for item in apres]
+            [print('%12.6f'%(item)) for item in apres]
             print('*** END: Pressure input ***\n')
         print('*********\nPressure file %s is opened well\nTotal number of lines: %d\n*********'%(fname,len(apres)))
         return apres, len(apres)
@@ -130,7 +92,6 @@ def openTemp(fname,Np):
     try:
         atemp = np.genfromtxt(fname,dtype='float', missing_values='296.15')
         (Npp, Ntt) = atemp.shape
-        global FLAG_DEBUG_PRINT
         if (Npp!=Np):
             raise PxTError
         if (FLAG_DEBUG_PRINT):
@@ -155,11 +116,7 @@ def openVMS(fname):
         global FLAG_DEBUG_PRINT
         if (FLAG_DEBUG_PRINT):
             print('*** DEBUG: VMS input ***')
-            if (avms.shape != ()):
-                [print('%12.6f'%(item)) for item in avms]
-            else:
-                print(avms)
-                avms = [avms]
+            [print('%12.6f'%(item)) for item in avms]
             print('*** END: VMS input ***\n')
         print('*********\nVMS file %s is opened well\nTotal number of lines: %d\n*********'%(fname,len(avms)))
         return avms, len(avms)
@@ -169,7 +126,6 @@ def openVMS(fname):
 
 def openXgenetareWn(fname,params):
     try:
-        global FLAG_DEBUG_PRINT
         with open(fname) as f:
             Nwn = int(f.readline())
             wn_begin = float(params[3][1])
@@ -194,8 +150,8 @@ def openXgenetareWn(fname,params):
 # creates a file HDF5 and saturate it with attributes
 def OpenHDF5(fname,params,pres, temp, vms, wns, Np, Nt, Nvms, Nwn):
     global FLAG_DEBUG_PRINT
-    INDEX_TEMP = '%02d'%(4)
-    INDEX_Qbrd_TEMP = '%02d'%(0)
+    INDEX_TEMP = '%02d'%(5)
+    INDEX_Qbrd_TEMP = '%02d'%(1)
 #    print(INDEX_TEMP)
     try:
         f = h5py.File(fname, mode='w')
@@ -301,15 +257,15 @@ def CalculateXsec(pres, Temp, VMS, WN_range, IndexMol, IndexBroad, param, Nwn):
             print('Pressure=%6.2f, temperature=%7.2f'%(pres,Temp))
             print('*** END: X-sec ***\n')
     
-        CoefFileName = './datafiles/%06.2fT_Id%02d_%06.4eatm_IdBroad%02d_%06.4fVMS_hitemp.dat'%(Temp,IndexMol,pres,IndexBroad,VMS)
+        CoefFileName = './datafiles/%06.2fT_Id%02d_%06.4fatm_IdBroad%02d_%06.4fVMS_hit20.dat'%(Temp,IndexMol,pres,IndexBroad,VMS)
     
-        nu_co,coef_co = absorptionCoefficient_Voigt(SourceTables='05_HITEMP2019-full',#'07_all_iso_hit20_0k-35k',#'05_HITEMP2019',#'CO_all_HITRAN',#
-                                                      HITRAN_units=True, OmegaRange=[wn_begin,wn_end],
-                                                      WavenumberStep=wn_step,
-                                                      WavenumberWing=25.0,
-                                                      Diluent={'self':1.00-VMS, 'air':VMS},
-                                                      Environment={'T':Temp,'p':pres},
-                                                      File = CoefFileName)
+        nu_co,coef_co = absorptionCoefficient_Voigt(SourceTables='COall',
+                                                     HITRAN_units=True, OmegaRange=[wn_begin,wn_end],
+                                                     WavenumberStep=wn_step,
+                                                     WavenumberWing=25.0,
+                                                     Diluent={'self':1.00-VMS, 'H2O':VMS},
+                                                     Environment={'T':Temp,'p':pres},
+                                                     File = CoefFileName)
         if (FLAG_REMOVE_HAPI):
             os.remove(CoefFileName)
         
@@ -347,185 +303,62 @@ def ParallelPart(Pressures, Temps, VMSs,WNs,ParametersCalculation,Nwn, ip, it, i
 
 
 
+# generate the set of P,T,VMS
 
 
-#############################################################
-# TO DO #####################################################
-#############################################################
-# TRY/EXCEPT IN XSEC ########################################
-#############################################################
 
-if __name__ == "__main__":
-    print('\nXMASSSECTION: program to calculate and store cross-sections in HDF5 files.\n')
-    
-    #print(weideman64(1.0,1.0))
-    
-    plt.rcParams.update({
-        "text.usetex": True,
-        "font.family": "sans-serif",
-        "font.sans-serif": ["Helvetica"]})
-    ## for Palatino and other serif fonts use:
-    plt.rcParams.update({
-        "text.usetex": True,
-        "font.family": "serif",
-        "font.serif": ["Palatino"],
-    })
-    
-    
-    
-    
-    
-    
-    
-    
-    if not os.path.exists("./images"):
-        os.mkdir("./images")
-    
-    if not os.path.exists("./datafiles"):
-        os.mkdir("./datafiles")
-    fLog = open('output.log', 'w')
-    fLog.close()
-    if (FLAG_LOG_FILE):
-        orig_stdout = sys.stdout
-        fLog = open('output.log', 'a')
-        sys.stdout = fLog
-    
-    
-    #############################################################
-    ### BEGIN OF MAIN PART ######################################
-    #############################################################
-    XMASSSEC_VERSION = '0.4.1'; __version__ = XMASSSEC_VERSION
-    XMASSSEC_HISTORY = [
-    'INITIATION OF INPUT FILE WITH PARAMETERS 31.01.23 (ver. 0.1)',
-    'CREATION OF HDF5 FILE + SOME EXCEPTIONS HANDLING (ver. 0.2)',
-    'CLOSING HDF5 FILE AND SATURATION OF ATTRIBUTES (ver. 0.2.1)',
-    'SATURATION OF ATTRIBUTE (ROOT) (ver. 0.2.2)',
-    'INPUTS FOR P,T AND SATURATION OF ATTRUBUTES (ver. 0.2.3)',
-    'INPUTS FOR VMS, WN AND SATURATION OF ATTRUBUTES + OUTPUT LOG FILE (ver. 0.2.4)',
-    'CALCULATING X-SEC (ver. 0.3)',
-    'CALCULATING X-SEC, DEBUG INFO (ver.0.3.1)',
-    'FIX: MISSING WN RANGE IN HDF5 FILE (ver. 0.3.2)',
-    'FIX: NEW EXCEPTION IN X-SEC RELATED TO NAN VALUES OF P,T,VMS (ver. 0.3.3)',
-    'FIRST ITERATION OF PARALLEL ATTEMPT (ver. 0.4)',
-    'FIX: FLOAT64 FOR DTYPE (ver.0.4.1)'
-    ]
-    
-    # version header
-    print('X-MASS-SEC version: %s'%(XMASSSEC_VERSION))
-    
-    #####################################################
-    
-    print("Timer started")
-    t_begin = time.time()
-    
-    
-    
-    
-    INPUT_FILENAME = 'params.inp'
-    
-    # PRES_FILENAME = 'pres.inp'
-    
-    # TEMP_FILENAME = 'temps.inp'
-    
-    PRES_FILENAME = 'pres_pRT.inp'
-    
-    TEMP_FILENAME = 'temps_pRT.inp'
-    
-    VMS_FILENAME = 'vms.inp'
-    
-    WN_FILENAME = 'wn.inp'
-    
-    # HDF5FileName = '16O2_alliso_0000-35000_HITRAN20_air.pRT.7000k.100wing.hdf5'
-    HDF5FileName = 'CO_alliso_0000-35000_HITEMP_air.pRT.7000k.25wing.hdf5'
-    
-    ParametersCalculation = openParametersFile(INPUT_FILENAME)
-    
-    Pressures, Np = openPressure(PRES_FILENAME)
-    
-    (Temps, Npp,Ntt) = openTemp(TEMP_FILENAME, Np)
-    
-    (VMSs, Nvms) = openVMS(VMS_FILENAME)
-    
-    WNs, Nwn = openXgenetareWn(WN_FILENAME,ParametersCalculation)
-    
-    co_hdf5 = OpenHDF5(HDF5FileName, ParametersCalculation, Pressures, Temps, VMSs, WNs, Npp, Ntt, Nvms, Nwn)
-    
-    db_begin('05_hit20')
-    
-    
-    
-    # 14x5x2
-    #1814 sec
-    #1453 sec ip 1778 sec 1598 sec 1541 sec
-    #1398 sec all 1517 sec 1648 sec 1641 sec 
-    #1620 sec itertools 1465 sec
-    # 14x5x4
-    #loops     4616 sec 3943 sec 4268 sec
-    #one loop  3774 sec 3876 sec 3738 sec
-    #all loops 3475 sec 3488 sec 3376 sec
-    #itertools 3134 sec 3565 sec 3250 sec
-    # 14x5x6
-    #loops     7982 sec 8587 sec 7478 sec
-    #one loop  7145 sec 7561 sec 6864 sec
-    #all loops 5714 sec 5912 sec
-    
-    
-    for ip in np.arange(Npp):
-        for it in np.arange(Ntt):
-            for ivms in np.arange(Nvms):
-                co_hdf5 = cProfile.run('ParallelPart(Pressures,Temps,VMSs,WNs,ParametersCalculation,Nwn,ip,it,ivms,co_hdf5)')
-                # ptemp = Pressures[ip]
-                # ttemp = Temps[ip,it]
-                # vmstemp = VMSs[ivms]
-                # print(ptemp,ttemp,vmstemp)
-                # coeffs = CalculateXsec(ptemp, ttemp,vmstemp,WNs,5,1,ParametersCalculation,Nwn)
-#                co_hdf5 = UpdateHDF5(co_hdf5, coeffs, ip, it, ivms)
-    
-    
-    
-    
-    # for it in np.arange(Ntt):
-    #     for ivms in np.arange(Nvms):
-    #         loop = asyncio.get_event_loop()                                              # Have a new event loop
-    
-    #         looper = asyncio.gather(*[ParallelPart(Pressures,Temps,VMSs,WNs,ParametersCalculation,Nwn,ip,it,ivms,co_hdf5) for ip in np.arange(Npp) ])         # Run the loop
-                                   
-    #         results = loop.run_until_complete(looper)             
-    
-    # loop = asyncio.get_event_loop()                                              # Have a new event loop
-    
-    # looper = asyncio.gather(*[ParallelPart(Pressures,Temps,VMSs,WNs,ParametersCalculation,Nwn,ip,it,ivms,co_hdf5) for ip in np.arange(Npp) for it in np.arange(Ntt) for ivms in np.arange(Nvms)])         # Run the loop
-                           
-    # results = loop.run_until_complete(looper)             
-    
-    
-    
-    # loop = asyncio.get_event_loop()                                              # Have a new event loop
-    
-    # looper = asyncio.gather(*[ParallelPart(Pressures,Temps,VMSs,WNs,ParametersCalculation,Nwn,ip,it,ivms,co_hdf5) for ip,it,ivms in itertools.product(np.arange(Npp),np.arange(Ntt),np.arange(Nvms))])         # Run the loop
-                           
-    # results = loop.run_until_complete(looper)             
-    
-    
-    
-    
-    
-    
-    CloseHDF5(co_hdf5)
-    
-    
-    
-    
-    t_end = time.time()
-    print('Time taken: %d seconds'%(t_end-t_begin))
-    
-    print('\nDone.')
-    
-    if (FLAG_LOG_FILE):
-        sys.stdout = orig_stdout
-        fLog.close()
-    
-    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
